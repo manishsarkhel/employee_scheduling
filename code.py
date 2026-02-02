@@ -143,22 +143,27 @@ def main():
     # 3. Visualizations
     st.subheader("Current Coverage vs. Requirements")
     
-    # Custom CSS for table to highlight rows
+    # Correction: defined a safe styling function to handle mixed data types
+    def highlight_status(row):
+        # We look specifically at the 'Status' column to decide the color for the whole row
+        status = row['Status']
+        color = ''
+        if "Understaffed" in status:
+            color = 'background-color: #ffcccc'  # Red
+        elif "Perfect" in status:
+            color = 'background-color: #ccffcc'  # Green
+        
+        # Return a list of style strings, one for each column in the row
+        return [color] * len(row)
+
     st.dataframe(
-        df.style.apply(lambda x: ['background-color: #ffcccc' if v == "🚨 Understaffed" 
-                                  else ('background-color: #ccffcc' if "Perfect" in v 
-                                  else '') for v in x], axis=1),
+        df.style.apply(highlight_status, axis=1),
         use_container_width=True,
         height=280
     )
 
     # Simple Bar Chart
     st.subheader("Visual Analysis")
-    chart_data = pd.DataFrame({
-        'Day': DAYS,
-        'Required': [REQUIREMENTS[d] for d in DAYS],
-        'Actual': [coverage[d] for d in DAYS]
-    })
     
     # Using Streamlit's native bar chart (Stacked to show gap)
     st.bar_chart(
