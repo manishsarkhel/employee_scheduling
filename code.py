@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 
 # --- Configuration & Data ---
-# Staffing requirements from the Case Study [Source: 61]
+# [cite_start]Staffing requirements from the Case Study [cite: 462]
 REQUIREMENTS = {
     "Monday": 6,
     "Tuesday": 4,
@@ -15,7 +15,7 @@ REQUIREMENTS = {
 
 DAYS = list(REQUIREMENTS.keys())
 
-# Define valid shift patterns based on "Consecutive Days Off" rule [Source: 59]
+# [cite_start]Define valid shift patterns based on "Consecutive Days Off" rule [cite: 454]
 # Format: "Label": [Days Off]
 SHIFT_PATTERNS = {
     "Sat-Sun Off (Work Mon-Fri)": ["Saturday", "Sunday"],
@@ -58,7 +58,7 @@ def main():
     
     **Constraints:**
     1. The facility operates 7 days a week.
-    2. [cite_start]Every employee must have **2 consecutive days off**[cite: 62].
+    2. Every employee must have **2 consecutive days off**.
     3. You must meet or exceed the required staffing level for every single day.
     """)
 
@@ -84,6 +84,7 @@ def main():
         if len(st.session_state.schedule) > 0:
             if st.button("Fire Last Employee"):
                 st.session_state.schedule.pop()
+                st.rerun() # Force rerun to update numbers immediately
         else:
             st.info("No employees to remove.")
             
@@ -143,34 +144,44 @@ def main():
     # 3. Visualizations
     st.subheader("Current Coverage vs. Requirements")
     
-    # Correction: defined a safe styling function to handle mixed data types
+    # Custom highlighting function 
     def highlight_status(row):
-        # We look specifically at the 'Status' column to decide the color for the whole row
+        # We look specifically at the 'Status' column to decide the color
         status = row['Status']
         color = ''
-        if "Understaffed" in status:
+        # Ensure we are checking strings to avoid type errors
+        if "Understaffed" in str(status): 
             color = 'background-color: #ffcccc'  # Red
-        elif "Perfect" in status:
+        elif "Perfect" in str(status):
             color = 'background-color: #ccffcc'  # Green
+        elif "Slack" in str(status):
+            color = 'background-color: #fff4cc' # Yellow for slack
         
-        # Return a list of style strings, one for each column in the row
+        # Apply this color to all columns in the row
         return [color] * len(row)
 
     st.dataframe(
         df.style.apply(highlight_status, axis=1),
         use_container_width=True,
-        height=280
+        height=320 # Slightly taller to prevent scrolling
     )
 
     # Simple Bar Chart
     st.subheader("Visual Analysis")
     
-    # Using Streamlit's native bar chart (Stacked to show gap)
+    # Define chart_data before using it
+    chart_data = pd.DataFrame({
+        'Day': DAYS,
+        'Required': [REQUIREMENTS[d] for d in DAYS],
+        'Actual': [coverage[d] for d in DAYS]
+    })
+    
+    # Using Streamlit's native bar chart
     st.bar_chart(
         chart_data.set_index('Day'),
-        color=["#FF4B4B", "#0068C9"] # Red for Req, Blue for Actual (Rough approximation)
+        color=["#FF4B4B", "#0068C9"] # Red for Req, Blue for Actual
     )
-    st.caption("Note: Ensure the 'Actual' bars meet or exceed the 'Required' levels.")
+    st.caption("Note: Ensure the 'Actual' (Blue) bars meet or exceed the 'Required' (Red) levels.")
 
     # --- Employee Roster List ---
     with st.expander("View Current Roster Details"):
@@ -180,7 +191,7 @@ def main():
             roster_data = []
             for i, shift in enumerate(st.session_state.schedule):
                 roster_data.append({"ID": i+1, "Shift Pattern": shift})
-            st.table(roster_data)
+            st.table(pd.DataFrame(roster_data))
 
 if __name__ == "__main__":
     main()
